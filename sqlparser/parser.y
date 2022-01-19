@@ -108,7 +108,6 @@ func forceEOF(yylex interface{}) {
   indexColumn   IndexColumn
   indexColumns  []IndexColumn
   foreignKeyDefinition *ForeignKeyDefinition
-  uniqueConstraintDefinition *UniqueConstraintDefinition
   partDefs      []*PartitionDefinition
   partDef       *PartitionDefinition
   partSpec      *PartitionSpec
@@ -173,7 +172,6 @@ func forceEOF(yylex interface{}) {
 %token <bytes> PERMISSIVE RESTRICTIVE PUBLIC CURRENT_USER SESSION_USER
 %token <bytes> PAD_INDEX FILLFACTOR IGNORE_DUP_KEY STATISTICS_NORECOMPUTE STATISTICS_INCREMENTAL ALLOW_ROW_LOCKS ALLOW_PAGE_LOCKS
 %token <bytes> BEFORE AFTER EACH ROW SCROLL CURSOR OPEN CLOSE FETCH PRIOR FIRST LAST DEALLOCATE
-%token <bytes> DEFERRABLE INITIALLY IMMEDIATE DEFERRED
 
 // Transaction Tokens
 %token <bytes> BEGIN START TRANSACTION COMMIT ROLLBACK
@@ -315,9 +313,6 @@ func forceEOF(yylex interface{}) {
 %type <columnType> column_definition_type
 %type <indexDefinition> index_definition primary_key_definition
 %type <foreignKeyDefinition> foreign_key_definition foreign_key_without_options
-%type <uniqueConstraintDefinition> unique_constraint_definition unique_constraint_definition_without_options
-%type <boolVal> deferrable_opt
-%type <boolVal> initially_deferred_opt
 %type <colIdent> reference_option
 %type <colIdent> sql_id_opt
 %type <colIdents> sql_id_list
@@ -1097,10 +1092,6 @@ table_column_list:
 | table_column_list ',' foreign_key_definition
   {
     $$.AddForeignKey($3)
-  }
-| table_column_list ',' unique_constraint_definition
-  {
-    $$.AddUniqueConstraint($3)
   }
 | table_column_list ',' primary_key_definition
   {
@@ -2055,53 +2046,6 @@ foreign_key_without_options:
       ReferenceName: NewColIdent($10.Name.String()),
       ReferenceColumns: $12,
     }
-  }
-
-unique_constraint_definition:
-  unique_constraint_definition_without_options deferrable_opt initially_deferred_opt
-  {
-    $1.Defferable = $2
-    $1.InitiallyDeferred = $3
-    $$ = $1
-  }
-| unique_constraint_definition_without_options deferrable_opt
-  {
-    $1.Defferable = $2
-    $$ = $1
-  }
-| unique_constraint_definition_without_options initially_deferred_opt
-  {
-    $1.InitiallyDeferred = $2
-    $$ = $1
-  }
-
-unique_constraint_definition_without_options:
-  CONSTRAINT sql_id_opt UNIQUE '(' sql_id_list ')'
-  {
-    $$ = &UniqueConstraintDefinition{
-      ConstraintName: $2,
-      IndexColumns: $5,
-    }
-  }
-
-deferrable_opt:
-  DEFERRABLE
-  {
-    $$ = BoolVal(true)
-  }
-| NOT DEFERRABLE
-  {
-    $$ = BoolVal(false)
-  }
-
-initially_deferred_opt:
-  INITIALLY DEFERRED
-  {
-    $$ = BoolVal(true)
-  }
-| INITIALLY IMMEDIATE
-  {
-    $$ = BoolVal(false)
   }
 
 reference_option:
