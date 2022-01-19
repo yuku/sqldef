@@ -1046,7 +1046,7 @@ func TestPsqldefAddIdentityColumnWithSequenceOption(t *testing.T) {
 	assertApplyOutput(t, createTableWithoutSequence, nothingModified)
 }
 
-func TestPsqldefCreateTableUniqueConstraint(t *testing.T) {
+func TestPsqldefAlterTableUniqueConstraint(t *testing.T) {
 	resetTestDatabase()
 
 	createPosts := stripHeredoc(`
@@ -1059,55 +1059,29 @@ func TestPsqldefCreateTableUniqueConstraint(t *testing.T) {
 	assertApplyOutput(t, createPosts, applyPrefix+createPosts)
 	assertApplyOutput(t, createPosts, nothingModified)
 
-	createPosts = stripHeredoc(`
-		CREATE TABLE posts (
-		  content text,
-		  slug varchar(100),
-		  CONSTRAINT posts_slug_unique UNIQUE (slug)
-		);
-		`,
-	)
-	assertApplyOutput(t, createPosts, applyPrefix+
+	alterTable := "ALTER TABLE posts ADD CONSTRAINT posts_slug_unique UNIQUE (slug);"
+	assertApplyOutput(t, createPosts+alterTable, applyPrefix+
 		`ALTER TABLE "public"."posts" ADD CONSTRAINT "posts_slug_unique" UNIQUE ("slug");`+"\n",
 	)
-	assertApplyOutput(t, createPosts, nothingModified)
+	assertApplyOutput(t, createPosts+alterTable, nothingModified)
 
-	createPosts = stripHeredoc(`
-		CREATE TABLE posts (
-		  content text,
-		  slug varchar(100),
-		  CONSTRAINT posts_slug_unique UNIQUE (slug) DEFERRABLE INITIALLY IMMEDIATE
-		);
-		`,
-	)
-	assertApplyOutput(t, createPosts, applyPrefix+
+	alterTable = "ALTER TABLE posts ADD CONSTRAINT posts_slug_unique UNIQUE (slug) NOT DEFERRABLE INITIALLY IMMEDIATE;"
+	assertApplyOutput(t, createPosts+alterTable, nothingModified)
+
+	alterTable = "ALTER TABLE posts ADD CONSTRAINT posts_slug_unique UNIQUE (slug) DEFERRABLE INITIALLY IMMEDIATE;"
+	assertApplyOutput(t, createPosts+alterTable, applyPrefix+
 		`ALTER TABLE "public"."posts" DROP CONSTRAINT "posts_slug_unique";`+"\n"+
 		`ALTER TABLE "public"."posts" ADD CONSTRAINT "posts_slug_unique" UNIQUE ("slug") DEFERRABLE INITIALLY IMMEDIATE;`+"\n",
 	)
-	assertApplyOutput(t, createPosts, nothingModified)
+	assertApplyOutput(t, createPosts+alterTable, nothingModified)
 
-
-	createPosts = stripHeredoc(`
-		CREATE TABLE posts (
-		  content text,
-		  slug varchar(100),
-		  CONSTRAINT posts_slug_unique UNIQUE (slug) DEFERRABLE INITIALLY DEFERRED
-		);
-		`,
-	)
-	assertApplyOutput(t, createPosts, applyPrefix+
+	alterTable = "ALTER TABLE posts ADD CONSTRAINT posts_slug_unique UNIQUE (slug) DEFERRABLE INITIALLY DEFERRED;"
+	assertApplyOutput(t, createPosts+alterTable, applyPrefix+
 		`ALTER TABLE "public"."posts" DROP CONSTRAINT "posts_slug_unique";`+"\n"+
 		`ALTER TABLE "public"."posts" ADD CONSTRAINT "posts_slug_unique" UNIQUE ("slug") DEFERRABLE INITIALLY DEFERRED;`+"\n",
 	)
-	assertApplyOutput(t, createPosts, nothingModified)
+	assertApplyOutput(t, createPosts+alterTable, nothingModified)
 
-	createPosts = stripHeredoc(`
-		CREATE TABLE posts (
-		  content text,
-		  slug varchar(100)
-		);
-		`,
-	)
 	assertApplyOutput(t, createPosts, applyPrefix+`ALTER TABLE "public"."posts" DROP CONSTRAINT "posts_slug_unique";`+"\n")
 	assertApplyOutput(t, createPosts, nothingModified)
 }
