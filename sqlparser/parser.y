@@ -172,6 +172,7 @@ func forceEOF(yylex interface{}) {
 %token <bytes> PERMISSIVE RESTRICTIVE PUBLIC CURRENT_USER SESSION_USER
 %token <bytes> PAD_INDEX FILLFACTOR IGNORE_DUP_KEY STATISTICS_NORECOMPUTE STATISTICS_INCREMENTAL ALLOW_ROW_LOCKS ALLOW_PAGE_LOCKS
 %token <bytes> BEFORE AFTER EACH ROW SCROLL CURSOR OPEN CLOSE FETCH PRIOR FIRST LAST DEALLOCATE
+%token <bytes> DEFERRABLE INITIALLY IMMEDIATE DEFERRED
 
 // Transaction Tokens
 %token <bytes> BEGIN START TRANSACTION COMMIT ROLLBACK
@@ -354,6 +355,7 @@ func forceEOF(yylex interface{}) {
 %type <strs> table_hint_list table_hint_opt
 %type <str> table_hint
 %type <newQualifierColName> new_qualifier_column_name
+%type <boolVal> deferrable_opt initially_deferred_opt
 
 %start any_command
 
@@ -2193,7 +2195,7 @@ alter_statement:
         IndexCols: $12,
       }
   }
-| ALTER ignore_opt TABLE table_name ADD CONSTRAINT sql_id UNIQUE '(' index_column_list ')'
+| ALTER ignore_opt TABLE table_name ADD CONSTRAINT sql_id UNIQUE '(' index_column_list ')' deferrable_opt initially_deferred_opt
   {
     $$ = &DDL{
         Action: AddIndexStr,
@@ -2203,6 +2205,8 @@ alter_statement:
           Name: $7,
           Unique: true,
           Primary: false,
+          Deferrable: $12,
+          InitiallyDeferred: $13
         },
         IndexCols: $10,
       }
@@ -4387,4 +4391,32 @@ ddl_force_eof:
 | reserved_sql_id
   {
     forceEOF(yylex)
+  }
+
+deferrable_opt:
+  /*empty*/
+  {
+    $$ = BoolVal(false)
+  }
+| DEFERRABLE
+  {
+    $$ = BoolVal(true)
+  }
+| NOT DEFERRABLE
+  {
+    $$ = BoolVal(false)
+  }
+
+initially_deferred_opt:
+  /*empty*/
+  {
+    $$ = BoolVal(false)
+  }
+| INITIALLY DEFERRED
+  {
+    $$ = BoolVal(true)
+  }
+| INITIALLY IMMEDIATE
+  {
+    $$ = BoolVal(false)
   }
