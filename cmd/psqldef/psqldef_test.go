@@ -1046,6 +1046,72 @@ func TestPsqldefAddIdentityColumnWithSequenceOption(t *testing.T) {
 	assertApplyOutput(t, createTableWithoutSequence, nothingModified)
 }
 
+func TestPsqldefCreateTableUniqueConstraint(t *testing.T) {
+	resetTestDatabase()
+
+	createPosts := stripHeredoc(`
+		CREATE TABLE posts (
+		  content text,
+		  slug varchar(100)
+		);
+		`,
+	)
+	assertApplyOutput(t, createPosts, applyPrefix+createPosts)
+	assertApplyOutput(t, createPosts, nothingModified)
+
+	createPosts = stripHeredoc(`
+		CREATE TABLE posts (
+		  content text,
+		  slug varchar(100),
+		  CONSTRAINT posts_slug_unique UNIQUE (slug)
+		);
+		`,
+	)
+	assertApplyOutput(t, createPosts, applyPrefix+
+		`ALTER TABLE "public"."posts" ADD CONSTRAINT "posts_slug_unique" UNIQUE ("slug");`+"\n",
+	)
+	assertApplyOutput(t, createPosts, nothingModified)
+
+	createPosts = stripHeredoc(`
+		CREATE TABLE posts (
+		  content text,
+		  slug varchar(100),
+		  CONSTRAINT posts_slug_unique UNIQUE (slug) DEFERRABLE INITIALLY IMMEDIATE
+		);
+		`,
+	)
+	assertApplyOutput(t, createPosts, applyPrefix+
+		`ALTER TABLE "public"."posts" DROP CONSTRAINT "posts_slug_unique";`+"\n"+
+		`ALTER TABLE "public"."posts" ADD CONSTRAINT "posts_slug_unique" UNIQUE ("slug") DEFERRABLE INITIALLY IMMEDIATE;`+"\n",
+	)
+	assertApplyOutput(t, createPosts, nothingModified)
+
+
+	createPosts = stripHeredoc(`
+		CREATE TABLE posts (
+		  content text,
+		  slug varchar(100),
+		  CONSTRAINT posts_slug_unique UNIQUE (slug) DEFERRABLE INITIALLY DEFERRED
+		);
+		`,
+	)
+	assertApplyOutput(t, createPosts, applyPrefix+
+		`ALTER TABLE "public"."posts" DROP CONSTRAINT "posts_slug_unique";`+"\n"+
+		`ALTER TABLE "public"."posts" ADD CONSTRAINT "posts_slug_unique" UNIQUE ("slug") DEFERRABLE INITIALLY DEFERRED;`+"\n",
+	)
+	assertApplyOutput(t, createPosts, nothingModified)
+
+	createPosts = stripHeredoc(`
+		CREATE TABLE posts (
+		  content text,
+		  slug varchar(100)
+		);
+		`,
+	)
+	assertApplyOutput(t, createPosts, applyPrefix+`ALTER TABLE "public"."posts" DROP CONSTRAINT "posts_slug_unique";`+"\n")
+	assertApplyOutput(t, createPosts, nothingModified)
+}
+
 func TestPsqldefHelp(t *testing.T) {
 	_, err := execute("./psqldef", "--help")
 	if err != nil {
