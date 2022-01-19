@@ -264,16 +264,18 @@ func parseIndex(stmt *sqlparser.DDL) (Index, error) {
 	}
 
 	return Index{
-		name:      stmt.IndexSpec.Name.String(),
-		indexType: "", // not supported in parser yet
-		columns:   indexColumns,
-		primary:   false, // not supported in parser yet
-		unique:    stmt.IndexSpec.Unique,
-		clustered: stmt.IndexSpec.Clustered,
-		where:     where,
-		included:  includedColumns,
-		options:   indexOptions,
-		partition: indexParition,
+		name:              stmt.IndexSpec.Name.String(),
+		indexType:         "", // not supported in parser yet
+		columns:           indexColumns,
+		primary:           false, // not supported in parser yet
+		unique:            stmt.IndexSpec.Unique,
+		clustered:         stmt.IndexSpec.Clustered,
+		where:             where,
+		included:          includedColumns,
+		options:           indexOptions,
+		partition:         indexParition,
+		deferrable:        stmt.IndexSpec.Deferrable,
+		initiallyDeferred: stmt.IndexSpec.InitiallyDeferred,
 	}, nil
 }
 
